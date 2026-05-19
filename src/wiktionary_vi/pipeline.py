@@ -4,7 +4,7 @@ import csv
 import json
 import time
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, Iterator, Optional
 
 from .api import get_category_members, get_page_wikitext
 from .parser import extract_pos_definitions
@@ -20,14 +20,27 @@ def _source_url(title: str) -> str:
     return f"https://vi.wiktionary.org/wiki/{title.replace(' ', '_')}"
 
 
-def collect_items(
+def _log(message: str) -> None:
+    print(message, flush=True)
+
+
+def iter_items(
     limit_per_category: Optional[int] = None,
     sleep_seconds: float = 0.1,
-) -> List[Dict[str, object]]:
-    items: List[Dict[str, object]] = []
+    log_every: int = 200,
+    verbose: bool = True,
+) -> Iterator[Dict[str, object]]:
+    total_seen = 0
+    total_kept = 0
 
     for pos_key, category in CATEGORIES.items():
+        seen = 0
+        kept = 0
+        if verbose:
+            _log(f"[{pos_key}] start {category}")
         for title in get_category_members(category, limit=limit_per_category):
+            seen += 1
+            total_seen += 1
             wikitext = get_page_wikitext(title)
             if not wikitext:
                 continue
@@ -36,19 +49,28 @@ def collect_items(
             if not definitions:
                 continue
 
-            items.append(
-                {
-                    "title": title,
-                    "pos": pos_key,
-                    "definitions": definitions,
-                    "source_url": _source_url(title),
-                }
-            )
+            kept += 1
+            total_kept += 1
+            yield {
+                "title": title,
+                "pos": pos_key,
+                "definitions": definitions,
+                "source_url": _source_url(title),
+            }
+
+            if verbose and log_every > 0 and seen % log_every == 0:
+                _log(
+                    f"[{pos_key}] seen {seen} kept {kept} | total seen {total_seen} kept {total_kept}"
+                )
 
             if sleep_seconds:
                 time.sleep(sleep_seconds)
 
-    return items
+        if verbose:
+            _log(f"[{pos_key}] done seen {seen} kept {kept}")
+
+    if verbose:
+        _log(f"[total] seen {total_seen} kept {total_kept}")
 
 
 def write_jsonl(output_path: Path, items: Iterable[Dict[str, object]]) -> None:
@@ -82,9 +104,14 @@ def run(
     fmt: str = "jsonl",
     limit_per_category: Optional[int] = None,
     sleep_seconds: float = 0.1,
+    log_every: int = 200,
+    verbose: bool = True,
 ) -> None:
-    items = collect_items(
-        limit_per_category=limit_per_category, sleep_seconds=sleep_seconds
+    items = iter_items(
+        limit_per_category=limit_per_category,
+        sleep_seconds=sleep_seconds,
+        log_every=log_every,
+        verbose=verbose,
     )
 
     if fmt == "jsonl":
