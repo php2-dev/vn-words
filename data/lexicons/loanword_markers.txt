@@ -1,0 +1,1 @@
+# Seed list extension. Add one borrowed/transliterated phrase per line.

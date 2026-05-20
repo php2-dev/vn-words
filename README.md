@@ -29,6 +29,17 @@ Frequency file formats:
 - word,freq (csv)
 - word (one per line)
 
+## Scoring and ranking
+Score words using explainable components: clean, pleasant, readable, native_vi,
+and frequency.
+
+1. python src/score_words.py --input data/vi_wiktionary_pos.jsonl --output data/vi_wiktionary_scored.jsonl --report data/vi_wiktionary_scoring_report.json
+2. python src/ai_label_words.py --provider ollama --model qwen2.5:7b-instruct --input data/vi_wiktionary_scored.jsonl --output data/word_ai_labels.csv --limit 1000 --batch-size 8
+3. python src/apply_word_labels.py --input data/vi_wiktionary_scored.jsonl --labels data/word_ai_labels.csv --output data/vi_wiktionary_calibrated.jsonl
+4. python src/select_words.py --input data/vi_wiktionary_calibrated.jsonl --output data/vi_wiktionary_selected.csv --format csv --min-score 0.78 --limit 500
+
+See docs/word_scoring_method.md for the scoring method and calibration plan.
+
 ## Notes
 - The pipeline uses category listings and can take time to finish.
 - Use --limit-per-category for sampling or testing.

@@ -1,0 +1,1 @@
+# Seed list. Add project-specific variants here, one phrase per line.

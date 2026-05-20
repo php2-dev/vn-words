@@ -1,0 +1,1 @@
+# Seed list extension. Add one Sino-Vietnamese syllable per line.
